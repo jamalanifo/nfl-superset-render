@@ -1,0 +1,43 @@
+services:
+  # Superset web service
+  - type: web
+    name: nfl-superset
+    env: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: standard
+    healthCheckPath: /health
+    envVars:
+      - key: SUPERSET_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_DIALECT
+        value: postgresql
+      - key: DATABASE_HOST
+        value: aws-0-us-east-2.pooler.supabase.com  # Replace with your Supabase host
+      - key: DATABASE_PORT
+        value: 6543
+      - key: DATABASE_DB
+        value: postgres  # Adjust if different
+      - key: DATABASE_USER
+        value: postgres.rqyxyfqpudibodldwwqt  # Replace with your Supabase user
+      - key: DATABASE_PASSWORD
+        sync: false  # You'll set this manually in Render
+      - key: ADMIN_PASSWORD
+        sync: false  # You'll set this manually in Render
+      - key: REDIS_HOST
+        fromService:
+          name: nfl-superset-redis
+          type: redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          name: nfl-superset-redis
+          type: redis
+          property: port
+      - key: SUPERSET_ENV
+        value: production
+
+  # Redis service for caching and celery
+  - type: redis
+    name: nfl-superset-redis
+    ipAllowList: [] # Only allow internal connections
