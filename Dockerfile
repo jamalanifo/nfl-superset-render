@@ -12,7 +12,7 @@ COPY ./docker/pythonpath/superset_config.py /app/pythonpath/superset_config.py
 COPY ./docker/docker-init-render.sh /app/docker-init-render.sh
 RUN chmod +x /app/docker-init-render.sh
 
-# Health check
+# Health check - use the correct Superset health endpoint
 HEALTHCHECK CMD curl -f http://localhost:8088/health || exit 1
 
 # Expose the port

@@ -13,17 +13,17 @@ services:
       - key: DATABASE_DIALECT
         value: postgresql
       - key: DATABASE_HOST
-        value: aws-0-us-east-2.pooler.supabase.com  # Replace with your Supabase host
+        value: aws-0-us-east-2.pooler.supabase.com
       - key: DATABASE_PORT
         value: 6543
       - key: DATABASE_DB
-        value: postgres  # Adjust if different
+        value: postgres
       - key: DATABASE_USER
-        value: postgres.rqyxyfqpudibodldwwqt  # Replace with your Supabase user
+        value: postgres.rqyxyfqpudibodldwwqt
       - key: DATABASE_PASSWORD
-        sync: false  # You'll set this manually in Render
+        sync: false
       - key: ADMIN_PASSWORD
-        sync: false  # You'll set this manually in Render
+        sync: false
       - key: REDIS_HOST
         fromService:
           name: nfl-superset-redis
@@ -36,8 +36,14 @@ services:
           property: port
       - key: SUPERSET_ENV
         value: production
+      - key: PYTHONPATH
+        value: /app/pythonpath
+      - key: FLASK_APP
+        value: superset.app:create_app()
+      - key: FLASK_ENV
+        value: production
 
   # Redis service for caching and celery
   - type: redis
     name: nfl-superset-redis
-    ipAllowList: [] # Only allow internal connections
+    ipAllowList: []
