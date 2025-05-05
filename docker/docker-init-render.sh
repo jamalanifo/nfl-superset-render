@@ -3,22 +3,36 @@ set -e
 
 echo "Initializing Superset..."
 
-# Check if REDIS_HOST and REDIS_PORT are available
-if [ -n "$REDIS_HOST" ] && [ -n "$REDIS_PORT" ]; then
-    echo "Checking Redis connection at ${REDIS_HOST}:${REDIS_PORT}..."
-    # Wait for Redis with a more robust approach
-    timeout=30
-    while ! nc -z ${REDIS_HOST} ${REDIS_PORT} >/dev/null 2>&1; do
-        timeout=$((timeout - 1))
-        if [ $timeout -eq 0 ]; then
-            echo "Warning: Redis connection timed out, but continuing with setup..."
-            break
-        fi
-        echo "Redis not available yet - waiting..."
-        sleep 1
-    done
+# Check for required environment variables
+echo "Checking environment variables..."
+if [ -z "$DATABASE_USER" ] || [ -z "$DATABASE_PASSWORD" ] || [ -z "$DATABASE_HOST" ]; then
+    echo "Error: Missing required database environment variables!"
+    echo "Make sure DATABASE_USER, DATABASE_PASSWORD, and DATABASE_HOST are set."
+    exit 1
+fi
+
+# Set default port if not specified
+if [ -z "$DATABASE_PORT" ]; then
+    echo "DATABASE_PORT not set, defaulting to 6543..."
+    export DATABASE_PORT=6543
+fi
+
+# Check Redis configuration
+if [ -z "$REDIS_HOST" ] || [ -z "$REDIS_PORT" ]; then
+    echo "Warning: Redis configuration not complete. Some features may not work."
 else
-    echo "Redis configuration not found. Continuing without Redis..."
+    # Wait for Redis to be available
+    echo "Waiting for Redis..."
+    timeout=60
+    while ! nc -z ${REDIS_HOST} ${REDIS_PORT} >/dev/null 2>&1; do
+      timeout=$((timeout - 1))
+      if [ $timeout -eq 0 ]; then
+        echo "Warning: Redis connection timed out. Continuing without Redis..."
+        break
+      fi
+      echo "Redis not available yet - waiting..."
+      sleep 1
+    done
 fi
 
 # Setup Superset database
@@ -39,7 +53,7 @@ echo "Initializing roles and permissions..."
 superset init
 
 # Start Gunicorn server with production settings
-echo "Starting Superset server on port 8088..."
+echo "Starting Superset server..."
 gunicorn \
     --bind 0.0.0.0:8088 \
     --workers=4 \

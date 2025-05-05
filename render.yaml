@@ -15,6 +15,7 @@ services:
       - key: DATABASE_HOST
         value: aws-0-us-east-2.pooler.supabase.com
       - key: DATABASE_PORT
+        # Make sure this is a string that can be converted to an integer
         value: 6543
       - key: DATABASE_DB
         value: postgres
@@ -42,11 +43,6 @@ services:
         value: superset.app:create_app()
       - key: FLASK_ENV
         value: production
-      - key: SUPERSET_WEBSERVER_PROTOCOL
-        value: https
-      # This is important to tell the service to wait for Redis
-      - key: WAIT_FOR_SERVICES
-        value: "false"  # Set to false to allow service to start without Redis
 
   # Redis service for caching and celery
   - type: redis
