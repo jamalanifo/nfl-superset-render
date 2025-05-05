@@ -8,7 +8,22 @@ RUN pip install psycopg2-binary sqlalchemy-utils redis
 # Copy configuration files
 COPY ./docker/pythonpath/superset_config.py /app/pythonpath/superset_config.py
 
-# Create an initialization script
+# Create a health check route
+RUN mkdir -p /app/superset/views && \
+    echo 'from flask import Blueprint, jsonify\n\
+health_bp = Blueprint("health", __name__)\n\
+\n\
+@health_bp.route("/health")\n\
+def health():\n\
+    return jsonify({"status": "ok"})\n\
+' > /app/superset/views/health.py
+
+# Add health blueprint to configuration 
+RUN echo 'from superset.views.health import health_bp\n\
+BLUEPRINTS = [health_bp]\n\
+' >> /app/pythonpath/superset_config.py
+
+# Create initialization script
 RUN echo '#!/bin/bash\n\
 set -e\n\
 \n\
@@ -31,6 +46,22 @@ superset fab create-admin \\\n\
 echo "Initializing roles and permissions..."\n\
 superset init\n\
 \n\
+# Start Celery worker in background (if needed)\n\
+if [[ -n "$REDIS_HOST" ]]; then\n\
+    echo "Starting Celery worker..."\n\
+    celery --app=superset.tasks.celery_app:app worker \\\n\
+        --loglevel=INFO \\\n\
+        --concurrency=2 \\\n\
+        --detach\n\
+    \n\
+    echo "Starting Celery beat..."\n\
+    celery --app=superset.tasks.celery_app:app beat \\\n\
+        --loglevel=INFO \\\n\
+        --pidfile /tmp/celerybeat.pid \\\n\
+        --schedule /tmp/celerybeat-schedule \\\n\
+        --detach\n\
+fi\n\
+\n\
 # Start Gunicorn server with production settings\n\
 echo "Starting Superset server..."\n\
 gunicorn \\\n\
@@ -45,7 +76,7 @@ gunicorn \\\n\
 RUN chmod +x /app/docker-entrypoint.sh
 
 # Health check
-HEALTHCHECK CMD curl -f http://localhost:8088/health || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 CMD curl -f http://localhost:8088/health || exit 1
 
 # Expose the port
 EXPOSE 8088
