@@ -1,10 +1,16 @@
 import os
-import json
 from celery.schedules import crontab
 from flask_appbuilder.security.manager import AUTH_DB
 
+# Get environment variables with proper default values
+DB_HOST = os.environ.get('DATABASE_HOST', 'aws-0-us-east-2.pooler.supabase.com')
+DB_PORT = int(os.environ.get('DATABASE_PORT', '6543'))  # Ensure this is an integer
+DB_USER = os.environ.get('DATABASE_USER', 'postgres.rqyxyfqpudibodldwwqt')
+DB_PASSWORD = os.environ.get('DATABASE_PASSWORD', '')
+DB_NAME = os.environ.get('DATABASE_DB', 'postgres')
+
 # Database connections
-SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg2://{os.environ.get('DATABASE_USER')}:{os.environ.get('DATABASE_PASSWORD')}@{os.environ.get('DATABASE_HOST')}:{os.environ.get('DATABASE_PORT')}/{os.environ.get('DATABASE_DB')}"
+SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 # Supabase NFL database
 DATABASES = {
@@ -19,86 +25,67 @@ DATABASES = {
             'metadata_cache_timeout': {},
             'schemas_allowed_for_csv_upload': []
         },
-        'sqlalchemy_uri': f"postgresql+psycopg2://{os.environ.get('DATABASE_USER')}:{os.environ.get('DATABASE_PASSWORD')}@{os.environ.get('DATABASE_HOST')}:{os.environ.get('DATABASE_PORT')}/{os.environ.get('DATABASE_DB')}",
+        'sqlalchemy_uri': f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}",
         'tables': []
     }
 }
 
-# Redis configuration with fallback
-REDIS_HOST = os.environ.get('REDIS_HOST', '')
-REDIS_PORT = os.environ.get('REDIS_PORT', '')
+# Redis configuration
+REDIS_HOST = os.environ.get('REDIS_HOST', 'redis')
+REDIS_PORT = int(os.environ.get('REDIS_PORT', '6379'))  # Ensure this is an integer
 REDIS_CELERY_DB = 0
 REDIS_RESULTS_DB = 1
 REDIS_CACHE_DB = 2
 
-# Parse environment variables with fallback
-def parse_env_config(env_var, default):
-    if env_var in os.environ:
-        try:
-            return json.loads(os.environ[env_var])
-        except json.JSONDecodeError:
-            pass
-    return default
-
-# Cache configuration with fallback
-DEFAULT_CACHE = {
-    'CACHE_TYPE': 'NullCache',
+# Cache configuration
+CACHE_CONFIG = {
+    'CACHE_TYPE': 'redis',
     'CACHE_DEFAULT_TIMEOUT': 300,
+    'CACHE_KEY_PREFIX': 'superset_',
+    'CACHE_REDIS_HOST': REDIS_HOST,
+    'CACHE_REDIS_PORT': REDIS_PORT,
+    'CACHE_REDIS_DB': REDIS_CACHE_DB,
 }
 
-# Use Redis if available, otherwise NullCache
-if REDIS_HOST and REDIS_PORT:
-    CACHE_CONFIG = parse_env_config('CACHE_CONFIG', {
-        'CACHE_TYPE': 'redis',
-        'CACHE_DEFAULT_TIMEOUT': 300,
-        'CACHE_KEY_PREFIX': 'superset_',
-        'CACHE_REDIS_HOST': REDIS_HOST,
-        'CACHE_REDIS_PORT': REDIS_PORT,
-        'CACHE_REDIS_DB': REDIS_CACHE_DB,
-    })
+# Data cache for query results
+DATA_CACHE_CONFIG = {
+    'CACHE_TYPE': 'redis',
+    'CACHE_DEFAULT_TIMEOUT': 3600,
+    'CACHE_KEY_PREFIX': 'superset_data_',
+    'CACHE_REDIS_HOST': REDIS_HOST,
+    'CACHE_REDIS_PORT': REDIS_PORT,
+    'CACHE_REDIS_DB': REDIS_CACHE_DB,
+}
 
-    DATA_CACHE_CONFIG = parse_env_config('DATA_CACHE_CONFIG', {
-        'CACHE_TYPE': 'redis',
-        'CACHE_DEFAULT_TIMEOUT': 3600,
-        'CACHE_KEY_PREFIX': 'superset_data_',
-        'CACHE_REDIS_HOST': REDIS_HOST,
-        'CACHE_REDIS_PORT': REDIS_PORT,
-        'CACHE_REDIS_DB': REDIS_CACHE_DB,
-    })
+# Filter state cache
+FILTER_STATE_CACHE_CONFIG = {
+    'CACHE_TYPE': 'RedisCache',
+    'CACHE_DEFAULT_TIMEOUT': 86400,
+    'CACHE_KEY_PREFIX': 'superset_filter_',
+    'CACHE_REDIS_HOST': REDIS_HOST,
+    'CACHE_REDIS_PORT': REDIS_PORT,
+    'CACHE_REDIS_DB': REDIS_CACHE_DB,
+}
 
-    FILTER_STATE_CACHE_CONFIG = parse_env_config('FILTER_STATE_CACHE_CONFIG', {
-        'CACHE_TYPE': 'RedisCache',
-        'CACHE_DEFAULT_TIMEOUT': 86400,
-        'CACHE_KEY_PREFIX': 'superset_filter_',
-        'CACHE_REDIS_HOST': REDIS_HOST,
-        'CACHE_REDIS_PORT': REDIS_PORT,
-        'CACHE_REDIS_DB': REDIS_CACHE_DB,
-    })
-
-    EXPLORE_FORM_DATA_CACHE_CONFIG = parse_env_config('EXPLORE_FORM_DATA_CACHE_CONFIG', {
-        'CACHE_TYPE': 'RedisCache',
-        'CACHE_DEFAULT_TIMEOUT': 86400,
-        'CACHE_KEY_PREFIX': 'superset_explore_',
-        'CACHE_REDIS_HOST': REDIS_HOST,
-        'CACHE_REDIS_PORT': REDIS_PORT,
-        'CACHE_REDIS_DB': REDIS_CACHE_DB,
-    })
-else:
-    # Fallback to NullCache when Redis is not available
-    CACHE_CONFIG = DEFAULT_CACHE
-    DATA_CACHE_CONFIG = DEFAULT_CACHE
-    FILTER_STATE_CACHE_CONFIG = DEFAULT_CACHE
-    EXPLORE_FORM_DATA_CACHE_CONFIG = DEFAULT_CACHE
+# Explore form data cache
+EXPLORE_FORM_DATA_CACHE_CONFIG = {
+    'CACHE_TYPE': 'RedisCache',
+    'CACHE_DEFAULT_TIMEOUT': 86400,
+    'CACHE_KEY_PREFIX': 'superset_explore_',
+    'CACHE_REDIS_HOST': REDIS_HOST,
+    'CACHE_REDIS_PORT': REDIS_PORT,
+    'CACHE_REDIS_DB': REDIS_CACHE_DB,
+}
 
 # Celery configuration
 class CeleryConfig:
-    broker_url = f'redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_CELERY_DB}' if REDIS_HOST and REDIS_PORT else None
+    broker_url = f'redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_CELERY_DB}'
     imports = (
         'superset.sql_lab',
         'superset.tasks.cache',
         'superset.tasks.scheduler',
     )
-    result_backend = f'redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_RESULTS_DB}' if REDIS_HOST and REDIS_PORT else None
+    result_backend = f'redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_RESULTS_DB}'
     worker_prefetch_multiplier = 1
     task_acks_late = False
     beat_schedule = {
@@ -112,7 +99,7 @@ class CeleryConfig:
         },
     }
 
-CELERY_CONFIG = CeleryConfig if REDIS_HOST and REDIS_PORT else None
+CELERY_CONFIG = CeleryConfig
 
 # Security
 SECRET_KEY = os.environ.get('SUPERSET_SECRET_KEY', 'thisISaSECRET_1234')

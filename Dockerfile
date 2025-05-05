@@ -8,7 +8,11 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+# Install required Python packages
 RUN pip install psycopg2-binary sqlalchemy-utils redis
+
+# Create directory for configuration
+RUN mkdir -p /app/pythonpath
 
 # Copy configuration files
 COPY ./docker/pythonpath/superset_config.py /app/pythonpath/superset_config.py

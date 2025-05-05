@@ -15,38 +15,35 @@ services:
       - key: DATABASE_HOST
         value: aws-0-us-east-2.pooler.supabase.com
       - key: DATABASE_PORT
-        value: 6543
+        value: 6543  # Make sure this is a NUMBER, not a string "None"
       - key: DATABASE_DB
         value: postgres
       - key: DATABASE_USER
         value: postgres.rqyxyfqpudibodldwwqt
       - key: DATABASE_PASSWORD
-        sync: false
+        sync: false  # You'll set this manually in Render
       - key: ADMIN_PASSWORD
-        sync: false
+        sync: false  # You'll set this manually in Render
+      - key: REDIS_HOST
+        fromService:
+          name: nfl-superset-redis
+          type: redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          name: nfl-superset-redis
+          type: redis
+          property: port
+      - key: SUPERSET_ENV
+        value: production
       - key: PYTHONPATH
         value: /app/pythonpath
       - key: FLASK_APP
         value: superset.app:create_app()
       - key: FLASK_ENV
         value: production
-      - key: SUPERSET_ENV
-        value: production
-      # Optional Redis configuration - will use NullCache if not available
-      # You can uncomment these later once basic deployment works
-      # - key: REDIS_HOST
-      #   fromService:
-      #     name: nfl-superset-redis
-      #     type: redis
-      #     property: host
-      # - key: REDIS_PORT
-      #   fromService:
-      #     name: nfl-superset-redis
-      #     type: redis
-      #     property: port
 
-  # Redis service for caching - commented out for initial deployment
-  # You can uncomment this later once the basic deployment works
-  # - type: redis
-  #   name: nfl-superset-redis
-  #   ipAllowList: []
+  # Redis service for caching and celery
+  - type: redis
+    name: nfl-superset-redis
+    ipAllowList: []
