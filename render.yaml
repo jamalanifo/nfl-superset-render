@@ -24,26 +24,29 @@ services:
         sync: false
       - key: ADMIN_PASSWORD
         sync: false
-      - key: REDIS_HOST
-        fromService:
-          name: nfl-superset-redis
-          type: redis
-          property: host
-      - key: REDIS_PORT
-        fromService:
-          name: nfl-superset-redis
-          type: redis
-          property: port
-      - key: SUPERSET_ENV
-        value: production
       - key: PYTHONPATH
         value: /app/pythonpath
       - key: FLASK_APP
         value: superset.app:create_app()
       - key: FLASK_ENV
         value: production
+      - key: SUPERSET_ENV
+        value: production
+      # Optional Redis configuration - will use NullCache if not available
+      # You can uncomment these later once basic deployment works
+      # - key: REDIS_HOST
+      #   fromService:
+      #     name: nfl-superset-redis
+      #     type: redis
+      #     property: host
+      # - key: REDIS_PORT
+      #   fromService:
+      #     name: nfl-superset-redis
+      #     type: redis
+      #     property: port
 
-  # Redis service for caching and celery
-  - type: redis
-    name: nfl-superset-redis
-    ipAllowList: []
+  # Redis service for caching - commented out for initial deployment
+  # You can uncomment this later once the basic deployment works
+  # - type: redis
+  #   name: nfl-superset-redis
+  #   ipAllowList: []

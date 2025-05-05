@@ -3,18 +3,36 @@ set -e
 
 echo "Initializing Superset..."
 
-# Wait for Redis to be available
-echo "Waiting for Redis..."
-timeout=60
-while ! nc -z ${REDIS_HOST} ${REDIS_PORT} >/dev/null 2>&1; do
-  timeout=$((timeout - 1))
-  if [ $timeout -eq 0 ]; then
-    echo "Error: Redis connection timed out"
-    exit 1
-  fi
-  echo "Redis not available yet - waiting..."
-  sleep 1
-done
+# Environment check
+echo "Environment: ${SUPERSET_ENV}"
+echo "Redis host: ${REDIS_HOST}"
+echo "Redis port: ${REDIS_PORT}"
+
+# Check if Redis is needed for this deployment
+if [ -n "${REDIS_HOST}" ] && [ -n "${REDIS_PORT}" ]; then
+    # Try to connect to Redis but with a fallback
+    echo "Checking Redis availability..."
+    if nc -z ${REDIS_HOST} ${REDIS_PORT} >/dev/null 2>&1; then
+        echo "Redis is available."
+        REDIS_AVAILABLE=true
+    else
+        echo "WARNING: Redis is not available. Proceeding with limited functionality."
+        REDIS_AVAILABLE=false
+        # Modify configurations to work without Redis
+        export CACHE_CONFIG='{"CACHE_TYPE": "NullCache"}'
+        export DATA_CACHE_CONFIG='{"CACHE_TYPE": "NullCache"}'
+        export FILTER_STATE_CACHE_CONFIG='{"CACHE_TYPE": "NullCache"}'
+        export EXPLORE_FORM_DATA_CACHE_CONFIG='{"CACHE_TYPE": "NullCache"}'
+    fi
+else
+    echo "Redis configuration not provided. Using NullCache."
+    REDIS_AVAILABLE=false
+    # Set cache to NullCache when Redis isn't configured
+    export CACHE_CONFIG='{"CACHE_TYPE": "NullCache"}'
+    export DATA_CACHE_CONFIG='{"CACHE_TYPE": "NullCache"}'
+    export FILTER_STATE_CACHE_CONFIG='{"CACHE_TYPE": "NullCache"}'
+    export EXPLORE_FORM_DATA_CACHE_CONFIG='{"CACHE_TYPE": "NullCache"}'
+fi
 
 # Setup Superset database
 echo "Initializing database..."
