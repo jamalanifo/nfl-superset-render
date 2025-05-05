@@ -3,7 +3,7 @@ set -e
 
 echo "Initializing Superset..."
 
-# Wait for Redis to be available (simple check)
+# Wait for Redis to be available
 echo "Waiting for Redis..."
 timeout=60
 while ! nc -z ${REDIS_HOST} ${REDIS_PORT} >/dev/null 2>&1; do
@@ -12,6 +12,7 @@ while ! nc -z ${REDIS_HOST} ${REDIS_PORT} >/dev/null 2>&1; do
     echo "Error: Redis connection timed out"
     exit 1
   fi
+  echo "Redis not available yet - waiting..."
   sleep 1
 done
 
@@ -32,21 +33,6 @@ superset fab create-admin \
 echo "Initializing roles and permissions..."
 superset init
 
-# Start Celery worker in background
-echo "Starting Celery worker..."
-celery --app=superset.tasks.celery_app:app worker \
-    --loglevel=INFO \
-    --concurrency=2 \
-    --detach
-
-# Start Celery beat in background
-echo "Starting Celery beat..."
-celery --app=superset.tasks.celery_app:app beat \
-    --loglevel=INFO \
-    --pidfile /tmp/celerybeat.pid \
-    --schedule /tmp/celerybeat-schedule \
-    --detach
-
 # Start Gunicorn server with production settings
 echo "Starting Superset server..."
 gunicorn \
@@ -55,6 +41,4 @@ gunicorn \
     --timeout 120 \
     --worker-class=gthread \
     --threads=10 \
-    --limit-request-line 0 \
-    --limit-request-field_size 0 \
     "superset.app:create_app()"

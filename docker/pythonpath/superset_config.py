@@ -2,15 +2,8 @@ import os
 from celery.schedules import crontab
 from flask_appbuilder.security.manager import AUTH_DB
 
-# Get environment variables with proper defaults
-DB_USER = os.environ.get('DATABASE_USER', '')
-DB_PASSWORD = os.environ.get('DATABASE_PASSWORD', '')
-DB_HOST = os.environ.get('DATABASE_HOST', '')
-DB_PORT = os.environ.get('DATABASE_PORT', '6543')  # Default to 6543
-DB_NAME = os.environ.get('DATABASE_DB', 'postgres')
-
-# Database connections - use variables with defaults to prevent 'None' string issues
-SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+# Database connections
+SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg2://{os.environ.get('DATABASE_USER')}:{os.environ.get('DATABASE_PASSWORD')}@{os.environ.get('DATABASE_HOST')}:{os.environ.get('DATABASE_PORT')}/{os.environ.get('DATABASE_DB')}"
 
 # Supabase NFL database
 DATABASES = {
@@ -25,13 +18,13 @@ DATABASES = {
             'metadata_cache_timeout': {},
             'schemas_allowed_for_csv_upload': []
         },
-        'sqlalchemy_uri': f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}",
+        'sqlalchemy_uri': f"postgresql+psycopg2://{os.environ.get('DATABASE_USER')}:{os.environ.get('DATABASE_PASSWORD')}@{os.environ.get('DATABASE_HOST')}:{os.environ.get('DATABASE_PORT')}/{os.environ.get('DATABASE_DB')}",
         'tables': []
     }
 }
 
-# Redis configuration with proper defaults
-REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
+# Redis configuration
+REDIS_HOST = os.environ.get('REDIS_HOST', 'redis')
 REDIS_PORT = os.environ.get('REDIS_PORT', '6379')
 REDIS_CELERY_DB = 0
 REDIS_RESULTS_DB = 1
@@ -128,3 +121,6 @@ SUPERSET_LOAD_EXAMPLES = False
 TALISMAN_ENABLED = True
 ENABLE_PROXY_FIX = True
 PROXY_FIX_CONFIG = {'x_for': 1, 'x_proto': 1, 'x_host': 1, 'x_port': 1, 'x_prefix': 1}
+
+# Health check endpoint configuration
+HEALTH_CHECK_ENDPOINT = '/health'
