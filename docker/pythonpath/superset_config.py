@@ -2,15 +2,8 @@ import os
 from celery.schedules import crontab
 from flask_appbuilder.security.manager import AUTH_DB
 
-# Get environment variables with proper default values
-DB_HOST = os.environ.get('DATABASE_HOST', 'aws-0-us-east-2.pooler.supabase.com')
-DB_PORT = int(os.environ.get('DATABASE_PORT', '6543'))  # Ensure this is an integer
-DB_USER = os.environ.get('DATABASE_USER', 'postgres.rqyxyfqpudibodldwwqt')
-DB_PASSWORD = os.environ.get('DATABASE_PASSWORD', '')
-DB_NAME = os.environ.get('DATABASE_DB', 'postgres')
-
 # Database connections
-SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg2://{os.environ.get('DATABASE_USER')}:{os.environ.get('DATABASE_PASSWORD')}@{os.environ.get('DATABASE_HOST')}:{os.environ.get('DATABASE_PORT')}/{os.environ.get('DATABASE_DB')}"
 
 # Supabase NFL database
 DATABASES = {
@@ -25,67 +18,83 @@ DATABASES = {
             'metadata_cache_timeout': {},
             'schemas_allowed_for_csv_upload': []
         },
-        'sqlalchemy_uri': f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}",
+        'sqlalchemy_uri': f"postgresql+psycopg2://{os.environ.get('DATABASE_USER')}:{os.environ.get('DATABASE_PASSWORD')}@{os.environ.get('DATABASE_HOST')}:{os.environ.get('DATABASE_PORT')}/{os.environ.get('DATABASE_DB')}",
         'tables': []
     }
 }
 
-# Redis configuration
-REDIS_HOST = os.environ.get('REDIS_HOST', 'redis')
-REDIS_PORT = int(os.environ.get('REDIS_PORT', '6379'))  # Ensure this is an integer
+# Redis configuration - with fallback to local memory if Redis not available
+REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
+REDIS_PORT = os.environ.get('REDIS_PORT', '6379')
 REDIS_CELERY_DB = 0
 REDIS_RESULTS_DB = 1
 REDIS_CACHE_DB = 2
 
-# Cache configuration
-CACHE_CONFIG = {
-    'CACHE_TYPE': 'redis',
-    'CACHE_DEFAULT_TIMEOUT': 300,
-    'CACHE_KEY_PREFIX': 'superset_',
-    'CACHE_REDIS_HOST': REDIS_HOST,
-    'CACHE_REDIS_PORT': REDIS_PORT,
-    'CACHE_REDIS_DB': REDIS_CACHE_DB,
-}
+# Check if Redis is configured
+redis_available = os.environ.get('REDIS_HOST') and os.environ.get('REDIS_PORT')
 
-# Data cache for query results
-DATA_CACHE_CONFIG = {
-    'CACHE_TYPE': 'redis',
-    'CACHE_DEFAULT_TIMEOUT': 3600,
-    'CACHE_KEY_PREFIX': 'superset_data_',
-    'CACHE_REDIS_HOST': REDIS_HOST,
-    'CACHE_REDIS_PORT': REDIS_PORT,
-    'CACHE_REDIS_DB': REDIS_CACHE_DB,
-}
+# Cache configuration with fallback
+if redis_available:
+    CACHE_CONFIG = {
+        'CACHE_TYPE': 'redis',
+        'CACHE_DEFAULT_TIMEOUT': 300,
+        'CACHE_KEY_PREFIX': 'superset_',
+        'CACHE_REDIS_HOST': REDIS_HOST,
+        'CACHE_REDIS_PORT': REDIS_PORT,
+        'CACHE_REDIS_DB': REDIS_CACHE_DB,
+    }
+    DATA_CACHE_CONFIG = {
+        'CACHE_TYPE': 'redis',
+        'CACHE_DEFAULT_TIMEOUT': 3600,
+        'CACHE_KEY_PREFIX': 'superset_data_',
+        'CACHE_REDIS_HOST': REDIS_HOST,
+        'CACHE_REDIS_PORT': REDIS_PORT,
+        'CACHE_REDIS_DB': REDIS_CACHE_DB,
+    }
+    FILTER_STATE_CACHE_CONFIG = {
+        'CACHE_TYPE': 'RedisCache',
+        'CACHE_DEFAULT_TIMEOUT': 86400,
+        'CACHE_KEY_PREFIX': 'superset_filter_',
+        'CACHE_REDIS_HOST': REDIS_HOST,
+        'CACHE_REDIS_PORT': REDIS_PORT,
+        'CACHE_REDIS_DB': REDIS_CACHE_DB,
+    }
+    EXPLORE_FORM_DATA_CACHE_CONFIG = {
+        'CACHE_TYPE': 'RedisCache',
+        'CACHE_DEFAULT_TIMEOUT': 86400,
+        'CACHE_KEY_PREFIX': 'superset_explore_',
+        'CACHE_REDIS_HOST': REDIS_HOST,
+        'CACHE_REDIS_PORT': REDIS_PORT,
+        'CACHE_REDIS_DB': REDIS_CACHE_DB,
+    }
+else:
+    # Use simple cache if Redis is not available
+    CACHE_CONFIG = {
+        'CACHE_TYPE': 'SimpleCache',
+        'CACHE_DEFAULT_TIMEOUT': 300,
+    }
+    DATA_CACHE_CONFIG = {
+        'CACHE_TYPE': 'SimpleCache',
+        'CACHE_DEFAULT_TIMEOUT': 3600,
+    }
+    FILTER_STATE_CACHE_CONFIG = {
+        'CACHE_TYPE': 'SimpleCache',
+        'CACHE_DEFAULT_TIMEOUT': 86400,
+    }
+    EXPLORE_FORM_DATA_CACHE_CONFIG = {
+        'CACHE_TYPE': 'SimpleCache',
+        'CACHE_DEFAULT_TIMEOUT': 86400,
+    }
 
-# Filter state cache
-FILTER_STATE_CACHE_CONFIG = {
-    'CACHE_TYPE': 'RedisCache',
-    'CACHE_DEFAULT_TIMEOUT': 86400,
-    'CACHE_KEY_PREFIX': 'superset_filter_',
-    'CACHE_REDIS_HOST': REDIS_HOST,
-    'CACHE_REDIS_PORT': REDIS_PORT,
-    'CACHE_REDIS_DB': REDIS_CACHE_DB,
-}
-
-# Explore form data cache
-EXPLORE_FORM_DATA_CACHE_CONFIG = {
-    'CACHE_TYPE': 'RedisCache',
-    'CACHE_DEFAULT_TIMEOUT': 86400,
-    'CACHE_KEY_PREFIX': 'superset_explore_',
-    'CACHE_REDIS_HOST': REDIS_HOST,
-    'CACHE_REDIS_PORT': REDIS_PORT,
-    'CACHE_REDIS_DB': REDIS_CACHE_DB,
-}
-
-# Celery configuration
+# Celery configuration with fallback
 class CeleryConfig:
-    broker_url = f'redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_CELERY_DB}'
+    broker_url = f'redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_CELERY_DB}' if redis_available else 'sqla+sqlite:///celerydb.sqlite'
     imports = (
         'superset.sql_lab',
         'superset.tasks.cache',
         'superset.tasks.scheduler',
     )
-    result_backend = f'redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_RESULTS_DB}'
+    result_backend = f'redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_RESULTS_DB}' if redis_available else 'db+sqlite:///celery_results.sqlite'
     worker_prefetch_multiplier = 1
     task_acks_late = False
     beat_schedule = {
@@ -108,17 +117,17 @@ AUTH_TYPE = AUTH_DB
 # Web server settings
 SUPERSET_WEBSERVER_TIMEOUT = 300
 SUPERSET_ENV = os.environ.get('SUPERSET_ENV', 'production')
-SUPERSET_WEBSERVER_PROTOCOL = 'https'
+SUPERSET_WEBSERVER_PROTOCOL = os.environ.get('SUPERSET_WEBSERVER_PROTOCOL', 'https')
 
 # Feature flags
 FEATURE_FLAGS = {
-    'ALERT_REPORTS': True,
-    'DASHBOARD_CACHE': True,
+    'ALERT_REPORTS': redis_available,  # Enable only if Redis is available
+    'DASHBOARD_CACHE': redis_available,  # Enable only if Redis is available
     'DASHBOARD_NATIVE_FILTERS': True,
     'EMBEDDED_SUPERSET': False,
     'ENABLE_TEMPLATE_PROCESSING': False,
     'TAGGING_SYSTEM': True,
-    'SQLLAB_BACKEND_PERSISTENCE': True,
+    'SQLLAB_BACKEND_PERSISTENCE': redis_available,  # Enable only if Redis is available
 }
 
 # Disable example dashboards in production

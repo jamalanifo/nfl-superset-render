@@ -3,26 +3,23 @@ set -e
 
 echo "Initializing Superset..."
 
-# Wait for Redis to be available
-echo "Waiting for Redis..."
-timeout=60
-while ! nc -z ${REDIS_HOST} ${REDIS_PORT} >/dev/null 2>&1; do
-  timeout=$((timeout - 1))
-  if [ $timeout -eq 0 ]; then
-    echo "Error: Redis connection timed out"
-    exit 1
-  fi
-  echo "Redis not available yet - waiting..."
-  sleep 1
-done
-
-# Debugging: Print connection details to validate environment variables
-echo "Database connection details:"
-echo "Host: ${DATABASE_HOST}"
-echo "Port: ${DATABASE_PORT}"
-echo "DB: ${DATABASE_DB}"
-echo "User: ${DATABASE_USER}"
-echo "Redis: ${REDIS_HOST}:${REDIS_PORT}"
+# Check if REDIS_HOST and REDIS_PORT are available
+if [ -n "$REDIS_HOST" ] && [ -n "$REDIS_PORT" ]; then
+    echo "Checking Redis connection at ${REDIS_HOST}:${REDIS_PORT}..."
+    # Wait for Redis with a more robust approach
+    timeout=30
+    while ! nc -z ${REDIS_HOST} ${REDIS_PORT} >/dev/null 2>&1; do
+        timeout=$((timeout - 1))
+        if [ $timeout -eq 0 ]; then
+            echo "Warning: Redis connection timed out, but continuing with setup..."
+            break
+        fi
+        echo "Redis not available yet - waiting..."
+        sleep 1
+    done
+else
+    echo "Redis configuration not found. Continuing without Redis..."
+fi
 
 # Setup Superset database
 echo "Initializing database..."
@@ -42,7 +39,7 @@ echo "Initializing roles and permissions..."
 superset init
 
 # Start Gunicorn server with production settings
-echo "Starting Superset server..."
+echo "Starting Superset server on port 8088..."
 gunicorn \
     --bind 0.0.0.0:8088 \
     --workers=4 \
