@@ -1,0 +1,47 @@
+Initializing Superset...
+Checking environment variables...
+Waiting for Redis...
+Initializing database...
+Loaded your LOCAL configuration at [/app/pythonpath/superset_config.py]
+
+Cleaning up slice uuid from dashboard position json..Cleaning up slice uuid from dashboard position json.. Done.      
+
+Updated 0 pie chart labels.
+0 slices altered
+
+Cleaning up slice uuid from dashboard position json..Cleaning up slice uuid from dashboard position json.. Done.      
+
+Updated 0 native filter configurations.
+Updated 0 filter sets with 0 filters.
+Upgraded 0 filters and 0 filter sets.
+Upgraded 0 slices.
+slices updated with no time_range_endpoints: 0
+>> Assign new UUIDs to tables...
+>> Drop intermediate columns...
+Adding column 'avatar_url' to table 'user_attribute'.
+
+Adding column 'catalog' to table 'tables'.
+
+Adding column 'catalog' to table 'query'.
+
+Adding column 'catalog' to table 'saved_query'.
+
+Adding column 'catalog' to table 'tab_state'.
+
+Adding column 'catalog' to table 'table_schema'.
+
+Adding column 'catalog_perm' to table 'tables'.
+
+Adding column 'catalog_perm' to table 'slices'.
+
+Creating admin user...
+Loaded your LOCAL configuration at [/app/pythonpath/superset_config.py]
+Recognized Database Authentications.
+Admin User admin created.
+Initializing roles and permissions...
+Loaded your LOCAL configuration at [/app/pythonpath/superset_config.py]
+Starting Superset server...
+Loaded your LOCAL configuration at [/app/pythonpath/superset_config.py]
+Loaded your LOCAL configuration at [/app/pythonpath/superset_config.py]
+Loaded your LOCAL configuration at [/app/pythonpath/superset_config.py]
+Loaded your LOCAL configuration at [/app/pythonpath/superset_config.py]

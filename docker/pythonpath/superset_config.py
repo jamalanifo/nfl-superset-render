@@ -18,13 +18,13 @@ def get_env_variable(var_name, default=None):
 DB_USER = get_env_variable('DATABASE_USER')
 DB_PASSWORD = get_env_variable('DATABASE_PASSWORD')
 DB_HOST = get_env_variable('DATABASE_HOST')
-DB_PORT = int(get_env_variable('DATABASE_PORT', '6543'))  # Default to 6543 if not set
+DB_PORT = int(get_env_variable('DATABASE_PORT', '5432'))  # Changed to 5432 for session mode
 DB_NAME = get_env_variable('DATABASE_DB', 'postgres')
 
-# Important: Handle the port correctly - convert to int
-SQLALCHEMY_DATABASE_URI = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+# Use SQLite for Superset's metadata
+SQLALCHEMY_DATABASE_URI = 'sqlite:////app/superset_home/superset.db'
 
-# Supabase NFL database
+# Supabase NFL database with session mode connection
 DATABASES = {
     'nfl_stats': {
         'allow_csv_upload': False,
@@ -33,7 +33,14 @@ DATABASES = {
         'database_name': 'NFL Statistics',
         'extra': {
             'metadata_params': {},
-            'engine_params': {},
+            'engine_params': {
+                'connect_args': {
+                    'options': '-c search_path=nfl_stats',
+                    'application_name': 'superset',
+                    'connect_timeout': 10,
+                    'sslmode': 'require'
+                }
+            },
             'metadata_cache_timeout': {},
             'schemas_allowed_for_csv_upload': []
         },
